@@ -30,17 +30,11 @@ function Plant({ plant }: { plant: GardenState["plants"][number] }) {
 export default function Home() {
   const [state, setState] = useState<GardenState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
 
   async function refresh() {
     const response = await fetch("/api/state", { cache: "no-store" });
     setState(await response.json());
-  }
-
-  async function simulatePush() {
-    setBusy(true);
-    const response = await fetch("/api/demo/push", { method: "POST" });
-    setState(await response.json());
-    setBusy(false);
   }
 
   async function reset() {
@@ -51,6 +45,16 @@ export default function Home() {
   }
 
   useEffect(() => {
+    const auth = new URLSearchParams(window.location.search).get("auth");
+    const messages: Record<string, string> = {
+      missing_github_config: "GitHub OAuth is not configured yet. Add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.",
+      state_mismatch: "GitHub rejected the connection check. Please try connecting again.",
+      token_exchange_failed: "GitHub did not return an access token. Check the OAuth app settings.",
+      user_fetch_failed: "GitHub connected, but the user profile could not be read."
+    };
+    if (auth) {
+      setAuthMessage(messages[auth] || "GitHub connection failed.");
+    }
     refresh();
   }, []);
 
@@ -93,14 +97,15 @@ export default function Home() {
             <p className="eyebrow">GitHub-powered care loop</p>
             <h1>Every push grows the world you come back to.</h1>
             <p className="lede">
-              Connect GitHub, receive push webhooks, or call the MCP bridge. Every push turns into plants, water,
-              mood, levels, and pet evolution.
+              Connect a real GitHub account, receive push webhooks, or call the MCP bridge with that GitHub actor.
+              Every matched push turns into plants, water, mood, levels, and pet evolution.
             </p>
+            {authMessage ? <p className="authError">{authMessage}</p> : null}
             <div className="ctaRow">
-              <button className="primaryButton" onClick={simulatePush} disabled={busy}>
-                <GitBranch size={18} />
-                Simulate Push
-              </button>
+              <a className="primaryButton" href="/api/auth/github">
+                <Github size={18} />
+                Connect GitHub
+              </a>
               <button className="secondaryButton" onClick={reset} disabled={busy}>
                 Reset Garden
               </button>
@@ -197,7 +202,7 @@ export default function Home() {
           </div>
           <div className="eventList">
             {state.events.length === 0 ? (
-              <p className="empty">Connect GitHub, send a webhook, call MCP, or simulate a push to start growing.</p>
+              <p className="empty">Connect GitHub, then send a webhook or MCP push with the same GitHub actor.</p>
             ) : (
               state.events.map((event) => (
                 <article className="event" key={event.id}>

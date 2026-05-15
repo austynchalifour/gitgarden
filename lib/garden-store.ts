@@ -11,7 +11,7 @@ export type PushEvent = {
   commits: number;
   message: string;
   actor: string;
-  source: "webhook" | "mcp" | "demo";
+  source: "webhook" | "mcp";
   createdAt: string;
 };
 
@@ -54,47 +54,91 @@ const initialState: GardenState = {
 };
 
 const globalForGarden = globalThis as unknown as {
-  githubGardenState?: GardenState;
+  githubGardenSessions?: Map<string, GardenState>;
+  githubGardenLoginIndex?: Map<string, string>;
 };
 
-export function getGardenState() {
-  if (!globalForGarden.githubGardenState) {
-    globalForGarden.githubGardenState = structuredClone(initialState);
+function getSessions() {
+  if (!globalForGarden.githubGardenSessions) {
+    globalForGarden.githubGardenSessions = new Map();
   }
 
-  return globalForGarden.githubGardenState;
+  return globalForGarden.githubGardenSessions;
 }
 
-export function connectProfile(profile?: Partial<GitHubProfile>) {
-  const state = getGardenState();
+function getLoginIndex() {
+  if (!globalForGarden.githubGardenLoginIndex) {
+    globalForGarden.githubGardenLoginIndex = new Map();
+  }
+
+  return globalForGarden.githubGardenLoginIndex;
+}
+
+export function createGardenSession() {
+  const sessionId = crypto.randomUUID();
+  getSessions().set(sessionId, structuredClone(initialState));
+  return sessionId;
+}
+
+export function getGardenState(sessionId?: string | null) {
+  if (!sessionId) {
+    return structuredClone(initialState);
+  }
+
+  const sessions = getSessions();
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, structuredClone(initialState));
+  }
+
+  return sessions.get(sessionId)!;
+}
+
+export function connectProfile(sessionId: string, profile: GitHubProfile) {
+  const state = getGardenState(sessionId);
   state.connected = true;
-  state.profile = {
-    login: profile?.login || "octo-gardener",
-    name: profile?.name || "Demo Gardener",
-    avatarUrl: profile?.avatarUrl || "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-  };
+  state.profile = profile;
+  getLoginIndex().set(profile.login.toLowerCase(), sessionId);
   return state;
 }
 
-export function disconnectProfile() {
-  const state = getGardenState();
+export function disconnectProfile(sessionId: string) {
+  const state = getGardenState(sessionId);
+  if (state.profile) {
+    getLoginIndex().delete(state.profile.login.toLowerCase());
+  }
   state.connected = false;
   state.profile = null;
   return state;
 }
 
-export function resetGarden() {
-  globalForGarden.githubGardenState = structuredClone(initialState);
-  return globalForGarden.githubGardenState;
+export function resetGarden(sessionId?: string | null) {
+  if (!sessionId) {
+    return structuredClone(initialState);
+  }
+
+  const current = getGardenState(sessionId);
+  const resetState = structuredClone(initialState);
+  resetState.connected = current.connected;
+  resetState.profile = current.profile;
+  getSessions().set(sessionId, resetState);
+  return resetState;
 }
 
-export function recordPush(input: Partial<PushEvent>) {
-  const state = getGardenState();
+export function findSessionByGitHubLogin(login?: string | null) {
+  if (!login) {
+    return null;
+  }
+
+  return getLoginIndex().get(login.toLowerCase()) || null;
+}
+
+export function recordPush(sessionId: string, input: Partial<PushEvent>) {
+  const state = getGardenState(sessionId);
   const commits = Math.max(1, Number(input.commits || 1));
   const pushNumber = state.pushes + 1;
   const event: PushEvent = {
     id: input.id || crypto.randomUUID(),
-    repo: input.repo || "octo/garden-engine",
+    repo: input.repo || "unknown/repo",
     branch: input.branch || "main",
     commits,
     message: input.message || `Push ${pushNumber} watered the garden`,
@@ -102,11 +146,6 @@ export function recordPush(input: Partial<PushEvent>) {
     source: input.source || "webhook",
     createdAt: input.createdAt || new Date().toISOString()
   };
-
-  state.connected = true;
-  if (!state.profile) {
-    connectProfile();
-  }
 
   state.pushes += 1;
   state.commits += commits;

@@ -202,6 +202,17 @@ h2 {
   line-height: 1.6;
 }
 
+.authError {
+  max-width: 560px;
+  padding: 12px 14px;
+  border: 1px solid rgba(186, 65, 65, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 242, 238, 0.82);
+  color: #8f2f2f;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .ctaRow {
   gap: 12px;
   flex-wrap: wrap;

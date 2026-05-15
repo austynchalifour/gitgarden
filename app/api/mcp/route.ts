@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGardenState, recordPush } from "@/lib/garden-store";
+import { findSessionByGitHubLogin, getGardenState, recordPush } from "@/lib/garden-store";
 
 type JsonRpcRequest = {
   id?: string | number | null;
@@ -62,15 +62,18 @@ export async function POST(request: NextRequest) {
               message: { type: "string" },
               actor: { type: "string" }
             },
-            required: ["repo"]
+            required: ["repo", "actor"]
           }
         },
         {
           name: "get_garden_state",
-          description: "Read the current garden and pet state.",
+          description: "Read the current garden and pet state for a connected GitHub actor.",
           inputSchema: {
             type: "object",
-            properties: {}
+            properties: {
+              actor: { type: "string" }
+            },
+            required: ["actor"]
           }
         }
       ]
@@ -82,12 +85,27 @@ export async function POST(request: NextRequest) {
     const args = body.params?.arguments || {};
 
     if (toolName === "record_github_push") {
-      const state = recordPush({
+      const actor = String(args.actor || "");
+      const sessionId = findSessionByGitHubLogin(actor);
+
+      if (!sessionId) {
+        return result(body.id, {
+          content: [
+            {
+              type: "text",
+              text: `No connected GitHub user matched actor ${actor || "(missing)"}.`
+            }
+          ],
+          structuredContent: { recorded: false }
+        });
+      }
+
+      const state = recordPush(sessionId, {
         repo: String(args.repo || "unknown/repo"),
         branch: String(args.branch || "main"),
         commits: Number(args.commits || 1),
         message: String(args.message || "MCP-recorded push"),
-        actor: String(args.actor || "mcp"),
+        actor,
         source: "mcp"
       });
 
@@ -103,7 +121,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (toolName === "get_garden_state") {
-      const state = getGardenState();
+      const sessionId = findSessionByGitHubLogin(String(args.actor || ""));
+      const state = getGardenState(sessionId);
       return result(body.id, {
         content: [
           {

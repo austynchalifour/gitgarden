@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
-import { recordPush } from "@/lib/garden-store";
+import { findSessionByGitHubLogin, recordPush } from "@/lib/garden-store";
 
 function isValidSignature(body: string, signature: string | null) {
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
@@ -31,14 +31,21 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = JSON.parse(body || "{}");
-  const state = recordPush({
+  const actor = payload.sender?.login;
+  const sessionId = findSessionByGitHubLogin(actor);
+
+  if (!sessionId) {
+    return NextResponse.json({ ok: true, recorded: false, reason: "No connected GitHub user matched this push actor" });
+  }
+
+  const state = recordPush(sessionId, {
     repo: payload.repository?.full_name,
     branch: String(payload.ref || "refs/heads/main").replace("refs/heads/", ""),
     commits: Array.isArray(payload.commits) ? payload.commits.length : 1,
     message: payload.head_commit?.message,
-    actor: payload.sender?.login,
+    actor,
     source: "webhook"
   });
 
-  return NextResponse.json({ ok: true, state });
+  return NextResponse.json({ ok: true, recorded: true, state });
 }

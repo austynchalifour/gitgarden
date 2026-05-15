@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getGardenState, resetGarden } from "@/lib/garden-store";
 
 export async function GET() {
-  return NextResponse.json(getGardenState());
+  const cookieStore = await cookies();
+  return NextResponse.json(getGardenState(cookieStore.get("gitgarden_session")?.value));
 }
 
 export async function DELETE() {
-  return NextResponse.json(resetGarden());
+  const cookieStore = await cookies();
+  return NextResponse.json(resetGarden(cookieStore.get("gitgarden_session")?.value));
 }

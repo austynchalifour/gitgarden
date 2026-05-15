@@ -27,7 +27,7 @@ Use this callback URL in GitHub:
 http://localhost:3000/api/auth/github/callback
 ```
 
-If those variables are missing, the app falls back to a demo connection so the product loop still works immediately.
+If those variables are missing, the app will refuse to connect and show a configuration error. There is no demo GitHub user fallback.
 
 ## GitHub webhooks
 
@@ -83,10 +83,9 @@ POST /api/mcp/push
 
 ## What is implemented
 
-- GitHub connect route with OAuth support and demo fallback.
+- GitHub connect route with OAuth support and no demo fallback.
 - Push webhook route with optional `x-hub-signature-256` verification.
 - MCP bridge route with `record_github_push` and `get_garden_state` tools.
-- Demo push endpoint for local testing.
 - Garden and pet state that grows from pushes and commits.
 - Polished responsive dashboard built with Next.js App Router.
 
