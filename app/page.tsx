@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Github, GitBranch, Heart, Leaf, PawPrint, Plug, RefreshCw, Sprout, Trees } from "lucide-react";
+import { Activity, Github, GitBranch, Heart, Leaf, PawPrint, Plug, RefreshCw, Trees } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { GardenState } from "@/lib/garden-store";
 
@@ -77,7 +77,8 @@ export default function Home() {
         <nav className="topbar" aria-label="Application">
           <div className="brand">
             <span className="brandMark">
-              <Sprout size={19} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="" />
             </span>
             <span>GitGarden</span>
           </div>
