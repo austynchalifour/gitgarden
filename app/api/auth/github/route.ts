@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+function getAppUrl(request: NextRequest) {
+  return request.nextUrl.origin.replace(/\/$/, "");
+}
+
+export async function GET(request: NextRequest) {
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl(request);
 
   if (!clientId) {
     return NextResponse.redirect(`${appUrl}/?auth=missing_github_config`);

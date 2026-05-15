@@ -27,6 +27,8 @@ Use this callback URL in GitHub:
 http://localhost:3000/api/auth/github/callback
 ```
 
+The callback URL must exactly match the URL you use to open the app. If you open `http://127.0.0.1:3000`, register `http://127.0.0.1:3000/api/auth/github/callback`. If you open `http://localhost:3000`, register `http://localhost:3000/api/auth/github/callback`.
+
 If those variables are missing, the app will refuse to connect and show a configuration error. There is no demo GitHub user fallback.
 
 ## GitHub webhooks

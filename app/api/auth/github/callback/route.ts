@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createGardenSession, connectProfile } from "@/lib/garden-store";
 
+function getAppUrl(request: NextRequest) {
+  return request.nextUrl.origin.replace(/\/$/, "");
+}
+
 export async function GET(request: NextRequest) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl(request);
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const expectedState = request.cookies.get("gitgarden_oauth_state")?.value;
